@@ -1,6 +1,9 @@
 ### Create config file
 - cp conf-example.json conf.json
 
-### run
+### Dependencies
+- nlohmann/json
+
+### Run
 - g++ main.cpp
 - sudo a.out
