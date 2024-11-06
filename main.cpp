@@ -11,15 +11,17 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include "nlohmann/json.hpp" // nlohmann JSON library
+#include "nlohmann/json.hpp" 
 
 using json = nlohmann::json;
 
 const int BUFFER_SIZE = 4096;
 std::vector<std::pair<std::string, int>> targets;
 int current_target_index = 0;
+std::string host="127.0.0.1";
+int port = 80;
 std::mutex target_lock;
-std::atomic<bool> running(true); // Flag to control server loop
+std::atomic<bool> running(true); 
 
 std::pair<std::string, int> get_next_target() {
     std::lock_guard<std::mutex> lock(target_lock);
@@ -39,11 +41,9 @@ void handle_client(int client_socket) {
     }
     std::string request(buffer, received);
     
-    // Get the next target in round-robin fashion
     auto [target_host, target_port] = get_next_target();
     std::cout << "Forwarding request to " << target_host << ":" << target_port << std::endl;
 
-    // Connect to target server
     int proxy_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (proxy_socket == -1) {
         std::cerr << "Failed to create socket to target server.\n";
@@ -63,10 +63,8 @@ void handle_client(int client_socket) {
         return;
     }
 
-    // Forward client's request to target server
     send(proxy_socket, buffer, received, 0);
 
-    // Relay data between client and target server
     fd_set read_fds;
     while (true) {
         FD_ZERO(&read_fds);
@@ -123,7 +121,7 @@ void start_server(const std::string& host, int port) {
         socklen_t client_len = sizeof(client_addr);
         int client_socket = accept(server_socket, (struct sockaddr*)&client_addr, &client_len);
         if (client_socket < 0) {
-            if (!running) break; // Exit if stopped
+            if (!running) break; 
             std::cerr << "Failed to accept client connection.\n";
             continue;
         }
@@ -143,8 +141,8 @@ void load_config() {
     json config;
     config_file >> config;
 
-    std::string host = config.value("host", "127.0.0.1");
-    int port = config.value("port", 80);
+    host = config.value("host", "127.0.0.1");
+    port = config.value("port", 80);
     int buffer_size = config.value("buffer_size", 4096);
 
     for (const auto& target : config["targets"]) {
@@ -176,8 +174,8 @@ int main() {
         return 1;
     }
 
-    std::thread exit_thread(monitor_for_exit); // Start monitoring for "q" input
-    start_server("127.0.0.1", 80);
-    exit_thread.join(); // Wait for exit thread to finish
+    std::thread exit_thread(monitor_for_exit);
+    start_server(host, port);
+    exit_thread.join(); 
     return 0;
 }
